@@ -192,61 +192,67 @@ function Runner() {
         </div>
 
         {selectedRunner && (
-          <div className="runner-details">
-            <div className="runner-details-header">
-              <h3>Chi tiết Runner: {selectedRunner.hostname}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedRunner(null)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="runner-details-content">
-              <div className="detail-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="detail-grid">
-                  <div className="detail-item">
-                    <label>Runner ID:</label>
-                    <span className="monospace">{selectedRunner.id}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Hostname:</label>
-                    <span>{selectedRunner.hostname}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>IP Address:</label>
-                    <span className="monospace">{selectedRunner.ip}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Status:</label>
-                    <span 
-                      className="status-badge" 
-                      style={{ backgroundColor: getStatusColor() }}
-                    >
-                      Online
-                    </span>
+          <div className="detail-overlay" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedRunner(null)
+            }
+          }}>
+            <div className="detail-sidebar">
+              <div className="detail-sidebar-header">
+                <h3>Chi tiết Runner: {selectedRunner.hostname}</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setSelectedRunner(null)}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="detail-sidebar-content">
+                <div className="detail-section">
+                  <h4>Thông tin cơ bản</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Runner ID:</label>
+                      <span className="monospace">{selectedRunner.id}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Hostname:</label>
+                      <span>{selectedRunner.hostname}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>IP Address:</label>
+                      <span className="monospace">{selectedRunner.ip}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Status:</label>
+                      <span 
+                        className="status-badge" 
+                        style={{ backgroundColor: getStatusColor() }}
+                      >
+                        Online
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="detail-section">
-                <h4>Tags</h4>
-                <div className="tags-detail">
-                  {getTagsList(selectedRunner.tags).map((tag, index) => (
-                    <span key={index} className="tag-detail">
-                      {tag}
-                    </span>
-                  ))}
+                <div className="detail-section">
+                  <h4>Tags</h4>
+                  <div className="tags-detail">
+                    {getTagsList(selectedRunner.tags).map((tag, index) => (
+                      <span key={index} className="tag-detail">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="detail-section">
-                <h4>Raw Data</h4>
-                <pre className="raw-data-container">
-                  {JSON.stringify(selectedRunner, null, 2)}
-                </pre>
+                <div className="detail-section">
+                  <h4>Raw Data</h4>
+                  <pre className="payload-container">
+                    {JSON.stringify(selectedRunner, null, 2)}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>

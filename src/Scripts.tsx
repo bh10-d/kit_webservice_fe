@@ -6,9 +6,9 @@ interface Script {
   file_name: string
   description: string
   param: string[]
+  status: boolean
   created_at: string
   updated_at: string
-  deleted_at: string | null
 }
 
 interface ScriptsResponse {
@@ -21,6 +21,16 @@ function Scripts() {
   const [selectedScript, setSelectedScript] = useState<Script | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [showCreateForm, setShowCreateForm] = useState<boolean>(false)
+  const [creating, setCreating] = useState<boolean>(false)
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    file_name: '',
+    description: '',
+    param: [''],
+    status: true
+  })
 
   // Function to fetch scripts from API
   const fetchScripts = async () => {
@@ -43,49 +53,98 @@ function Scripts() {
       
       const data: ScriptsResponse = await response.json()
       console.log('Scripts API Response:', data)
-      setScripts(data.data || [])
+      // Use the 'scripts' field from API response instead of 'data'
+      setScripts(data.scripts || data.data || [])
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch scripts'
       setError(`Không thể kết nối đến API: ${errorMessage}`)
       console.error('Error fetching scripts:', err)
       
-      // Fallback to mock data for testing
-      console.log('Using mock scripts data as fallback')
-    //   const mockData: ScriptsResponse = {
-    //     scripts: [
-    //       {
-    //         script_id: "1",
-    //         file_name: "check_site.sh",
-    //         description: "Kiểm tra trạng thái website",
-    //         param: ["subDomain"],
-    //         created_at: "0001-01-01T00:00:00Z",
-    //         updated_at: "0001-01-01T00:00:00Z",
-    //         deleted_at: null
-    //       },
-    //       {
-    //         script_id: "2",
-    //         file_name: "backup_db.sh",
-    //         description: "Sao lưu cơ sở dữ liệu",
-    //         param: ["database", "backup_path"],
-    //         created_at: "2024-01-15T10:30:00Z",
-    //         updated_at: "2024-01-20T14:45:00Z",
-    //         deleted_at: null
-    //       },
-    //       {
-    //         script_id: "3",
-    //         file_name: "deploy_app.sh",
-    //         description: "Triển khai ứng dụng",
-    //         param: ["app_name", "version", "environment"],
-    //         created_at: "2024-02-01T09:00:00Z",
-    //         updated_at: "2024-02-05T16:20:00Z",
-    //         deleted_at: null
-    //       }
-    //     ]
-    //   }
-    //   setScripts(mockData.scripts)
+      // Don't use fallback mock data, show error instead
+      setScripts([])
     } finally {
       setLoading(false)
     }
+  }
+
+  // Function to create new script
+  const createScript = async () => {
+    try {
+      setCreating(true)
+      setError(null)
+      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://10.24.191.38:5000'
+      const response = await fetch(`${apiBaseUrl}/scripts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+        body: JSON.stringify({
+          file_name: formData.file_name,
+          description: formData.description,
+          param: formData.param.filter(p => p.trim() !== ''),
+          status: formData.status
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      console.log('Create script response:', result)
+      
+      // Reset form and close
+      setFormData({
+        file_name: '',
+        description: '',
+        param: [''],
+        status: true
+      })
+      setShowCreateForm(false)
+      
+      // Refresh scripts list
+      fetchScripts()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create script'
+      setError(`Không thể tạo script: ${errorMessage}`)
+      console.error('Error creating script:', err)
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // Handle param array changes
+  const handleParamChange = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      param: prev.param.map((p, i) => i === index ? value : p)
+    }))
+  }
+
+  // Add new param field
+  const addParam = () => {
+    setFormData(prev => ({
+      ...prev,
+      param: [...prev.param, '']
+    }))
+  }
+
+  // Remove param field
+  const removeParam = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      param: prev.param.filter((_, i) => i !== index)
+    }))
   }
 
   useEffect(() => {
@@ -103,12 +162,13 @@ function Scripts() {
     }
   }
 
-  const getStatusColor = (deletedAt: string | null) => {
-    return deletedAt ? '#6b7280' : '#10b981' // gray if deleted, green if active
+  const getStatusColor = (status: boolean) => {
+    // Return color based on boolean status value
+    return status ? '#10b981' : '#6b7280' // green if true, gray if false
   }
 
-  const getStatusText = (deletedAt: string | null) => {
-    return deletedAt ? 'Deleted' : 'Active'
+  const getStatusText = (status: boolean) => {
+    return status ? 'Active' : 'Inactive'
   }
 
   return (
@@ -122,13 +182,22 @@ function Scripts() {
         <div className="jobs-table-container">
           <div className="table-header">
             <h2>Danh sách Scripts ({scripts.length})</h2>
-            <button 
-              className="refresh-btn"
-              onClick={fetchScripts}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : 'Refresh'}
-            </button>
+            <div className="header-actions">
+              <button 
+                className="create-btn"
+                onClick={() => setShowCreateForm(true)}
+                disabled={loading}
+              >
+                + Tạo Script
+              </button>
+              <button 
+                className="refresh-btn"
+                onClick={fetchScripts}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
           </div>
           
           {loading ? (
@@ -140,7 +209,6 @@ function Scripts() {
             <div className="error-container">
               <h3>Lỗi khi tải dữ liệu</h3>
               <p>{error}</p>
-              <p className="error-note">Hiển thị dữ liệu mẫu để demo</p>
               <button 
                 className="retry-btn"
                 onClick={fetchScripts}
@@ -192,9 +260,9 @@ function Scripts() {
                       <td>
                         <span 
                           className="status-badge" 
-                          style={{ backgroundColor: getStatusColor(script.deleted_at) }}
+                          style={{ backgroundColor: getStatusColor(script.status) }}
                         >
-                          {getStatusText(script.deleted_at)}
+                          {getStatusText(script.status)}
                         </span>
                       </td>
                       <td>
@@ -214,70 +282,200 @@ function Scripts() {
         </div>
 
         {selectedScript && (
-          <div className="job-details">
-            <div className="job-details-header">
-              <h3>Chi tiết Script: {selectedScript.file_name}</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedScript(null)}
-              >
-                ×
-              </button>
+          <div className="detail-overlay" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedScript(null)
+            }
+          }}>
+            <div className="detail-sidebar">
+              <div className="detail-sidebar-header">
+                <h3>Chi tiết Script: {selectedScript.file_name}</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setSelectedScript(null)}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="detail-sidebar-content">
+                <div className="detail-section">
+                  <h4>Thông tin cơ bản</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Script ID:</label>
+                      <span>{selectedScript.script_id}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>File Name:</label>
+                      <span className="monospace">{selectedScript.file_name}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Description:</label>
+                      <span>{selectedScript.description}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Status:</label>
+                      <span 
+                        className="status-badge" 
+                        style={{ backgroundColor: getStatusColor(selectedScript.status) }}
+                      >
+                        {getStatusText(selectedScript.status)}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Created At:</label>
+                      <span>{formatDate(selectedScript.created_at)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Updated At:</label>
+                      <span>{formatDate(selectedScript.updated_at)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Parameters</h4>
+                  <div className="tags-detail">
+                    {selectedScript.param.map((param, index) => (
+                      <span key={index} className="tag-detail">
+                        {param}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>Raw Data</h4>
+                  <pre className="payload-container">
+                    {JSON.stringify(selectedScript, null, 2)}
+                  </pre>
+                </div>
+              </div>
             </div>
-            
-            <div className="job-details-content">
-              <div className="detail-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="detail-grid">
-                  <div className="detail-item">
-                    <label>Script ID:</label>
-                    <span>{selectedScript.script_id}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>File Name:</label>
-                    <span className="monospace">{selectedScript.file_name}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Description:</label>
-                    <span>{selectedScript.description}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Status:</label>
-                    <span 
-                      className="status-badge" 
-                      style={{ backgroundColor: getStatusColor(selectedScript.deleted_at) }}
+          </div>
+        )}
+
+        {/* Create Script Form Modal */}
+        {showCreateForm && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Tạo Script Mới</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setShowCreateForm(false)}
+                  disabled={creating}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <form onSubmit={(e) => { e.preventDefault(); createScript(); }} className="create-form">
+                <div className="form-group">
+                  <label htmlFor="file_name">File Name:</label>
+                  <input
+                    type="text"
+                    id="file_name"
+                    value={formData.file_name}
+                    onChange={(e) => handleInputChange('file_name', e.target.value)}
+                    placeholder="example_script.sh"
+                    required
+                    disabled={creating}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="description">Description:</label>
+                  <textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="asdasdasdasd.com"
+                    required
+                    disabled={creating}
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Parameters:</label>
+                  <div className="params-container">
+                    {formData.param.map((param, index) => (
+                      <div key={index} className="param-input-group">
+                        <input
+                          type="text"
+                          value={param}
+                          onChange={(e) => handleParamChange(index, e.target.value)}
+                          placeholder={index === 0 ? "test" : index === 1 ? "asdhjasd" : `Param ${index + 1}`}
+                          disabled={creating}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeParam(index)}
+                          disabled={formData.param.length <= 1 || creating}
+                          className="remove-param-btn"
+                        >
+                          -
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addParam}
+                      disabled={creating}
+                      className="add-param-btn"
                     >
-                      {getStatusText(selectedScript.deleted_at)}
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Created At:</label>
-                    <span>{formatDate(selectedScript.created_at)}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Updated At:</label>
-                    <span>{formatDate(selectedScript.updated_at)}</span>
+                      + Thêm Parameter
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="detail-section">
-                <h4>Parameters</h4>
-                <div className="tags-detail">
-                  {selectedScript.param.map((param, index) => (
-                    <span key={index} className="tag-detail">
-                      {param}
-                    </span>
-                  ))}
+                
+                <div className="form-group">
+                  <label htmlFor="status">Status:</label>
+                  <div className="status-toggle">
+                    <label className="toggle-label">
+                      <input
+                        type="checkbox"
+                        id="status"
+                        checked={formData.status}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          status: e.target.checked
+                        }))}
+                        disabled={creating}
+                      />
+                      <span className="toggle-text">
+                        {formData.status ? 'Active' : 'Inactive'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
-              </div>
-
-              <div className="detail-section">
-                <h4>Raw Data</h4>
-                <pre className="payload-container">
-                  {JSON.stringify(selectedScript, null, 2)}
-                </pre>
-              </div>
+                
+                {error && (
+                  <div className="form-error">
+                    {error}
+                  </div>
+                )}
+                
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateForm(false)}
+                    disabled={creating}
+                    className="cancel-btn"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating || !formData.file_name.trim() || !formData.description.trim()}
+                    className="submit-btn"
+                  >
+                    {creating ? 'Đang tạo...' : 'Tạo Script'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

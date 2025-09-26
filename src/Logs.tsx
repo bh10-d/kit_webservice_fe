@@ -215,65 +215,71 @@ function Logs() {
         </div>
 
         {selectedLog && (
-          <div className="job-details">
-            <div className="job-details-header">
-              <h3>Chi tiết Log</h3>
-              <button 
-                className="close-btn"
-                onClick={() => setSelectedLog(null)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="job-details-content">
-              <div className="detail-section">
-                <h4>Thông tin cơ bản</h4>
-                <div className="detail-grid">
-                  <div className="detail-item">
-                    <label>Message ID:</label>
-                    <span className="monospace">{selectedLog.msg_id}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Runner ID:</label>
-                    <span className="monospace">{selectedLog.runner_id}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Status:</label>
-                    <span 
-                      className="status-badge" 
-                      style={{ backgroundColor: getStatusColor(selectedLog.status) }}
-                    >
-                      {selectedLog.status}
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Message:</label>
-                    <span>{selectedLog.message}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Created At:</label>
-                    <span>{formatDate(selectedLog.created_at)}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Updated At:</label>
-                    <span>{formatDate(selectedLog.updated_at)}</span>
+          <div className="detail-overlay" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedLog(null)
+            }
+          }}>
+            <div className="detail-sidebar">
+              <div className="detail-sidebar-header">
+                <h3>Chi tiết Log</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setSelectedLog(null)}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="detail-sidebar-content">
+                <div className="detail-section">
+                  <h4>Thông tin cơ bản</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Message ID:</label>
+                      <span className="monospace">{selectedLog.msg_id}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Runner ID:</label>
+                      <span className="monospace">{selectedLog.runner_id}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Status:</label>
+                      <span 
+                        className="status-badge" 
+                        style={{ backgroundColor: getStatusColor(selectedLog.status) }}
+                      >
+                        {selectedLog.status}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Message:</label>
+                      <span>{selectedLog.message}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Created At:</label>
+                      <span>{formatDate(selectedLog.created_at)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Updated At:</label>
+                      <span>{formatDate(selectedLog.updated_at)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="detail-section">
-                <h4>Log Details</h4>
-                <pre className="payload-container">
-                  {selectedLog.logs}
-                </pre>
-              </div>
+                <div className="detail-section">
+                  <h4>Log Details</h4>
+                  <pre className="payload-container">
+                    {selectedLog.logs}
+                  </pre>
+                </div>
 
-              <div className="detail-section">
-                <h4>Raw Data</h4>
-                <pre className="payload-container">
-                  {JSON.stringify(selectedLog, null, 2)}
-                </pre>
+                <div className="detail-section">
+                  <h4>Raw Data</h4>
+                  <pre className="payload-container">
+                    {JSON.stringify(selectedLog, null, 2)}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>
